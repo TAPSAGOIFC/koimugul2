@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Koimugul Village</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f5f5f5;
+    }
+    header {
+      background: #004d40;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    main {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      flex-wrap: wrap;
+    }
+    section {
+      background: white;
+      border-radius: 6px;
+      padding: 20px;
+      flex: 1;
+      max-width: 600px;
+      overflow-y: auto;
+      max-height: 80vh;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    form input[type="text"], form textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    form input[type="file"] {
+      margin-bottom: 10px;
+    }
+    form button {
+      background: #00796b;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .post {
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+    }
+    .post img {
+      max-width: 100%;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+    .football-section {
+      flex: 1;
+      max-width: 400px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+      padding: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Koimugul Village</h1>
+  <p>Community Posts & Football Dashboard</p>
+</header>
+
+<main>
+  <!-- Posts Section -->
+  <section>
+    <h2>Community Posts</h2>
+    <form id="postForm">
+      <textarea id="message" placeholder="Write your message..." required rows="3"></textarea>
+      <input type="file" id="imageInput" accept="image/*" />
+      <button type="submit">Post</button>
+    </form>
+    <div id="posts"></div>
+  </section>
+
+  <!-- Football Dashboard -->
+  <section class="football-section">
+    <h2>Football Dashboard</h2>
+    
+    <h3>Updates</h3>
+    <ul id="updates">
+      <li>Koimugul FC wins 3-1 in the last match!</li>
+      <li>Next fixture: Koimugul FC vs Riverside United, June 5th</li>
+    </ul>
+    
+    <h3>Fixtures</h3>
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Fixture</th><th>Time</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>June 5</td><td>Koimugul FC vs Riverside United</td><td>3 PM</td></tr>
+        <tr><td>June 12</td><td>Koimugul FC vs Valley Stars</td><td>5 PM</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Players</h3>
+    <ul>
+      <li>John Doe - Forward</li>
+      <li>Michael Smith - Midfielder</li>
+      <li>James Brown - Defender</li>
+    </ul>
+    
+    <h3>League Table</h3>
+    <table>
+      <thead>
+        <tr><th>Position</th><th>Team</th><th>Points</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Koimugul FC</td><td>18</td></tr>
+        <tr><td>2</td><td>Riverside United</td><td>15</td></tr>
+        <tr><td>3</td><td>Valley Stars</td><td>12</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+
+<!-- Firebase SDK (modular) -->
+<script type="module">
+  // Import Firebase SDK
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+  import { getDatabase, ref, push, onValue, query, orderByChild } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
+
+  // Your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAScof8lqfMM7VCTUL-v-lk9HOVYlXnqPM",
+    authDomain: "koimugul-village.firebaseapp.com",
+    projectId: "koimugul-village",
+    storageBucket: "koimugul-village.appspot.com",
+    messagingSenderId: "978425228829",
+    appId: "1:978425228829:web:81528b345b8e15703920f4",
+    measurementId: "G-PMH4Q75M3X"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+  const storage = getStorage(app);
+
+  // Sign in anonymously
+  signInAnonymously(auth).catch(console.error);
+
+  const postForm = document.getElementById('postForm');
+  const messageInput = document.getElementById('message');
+  const imageInput = document.getElementById('imageInput');
+  const postsDiv = document.getElementById('posts');
+
+  postForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const message = messageInput.value.trim();
+    if (!message && !imageInput.files.length) {
+      alert('Please enter a message or select an image.');
+      return;
+    }
+
+    postForm.querySelector('button').disabled = true;
+
+    let imageUrl = '';
+    if (imageInput.files.length > 0) {
+      const file = imageInput.files[0];
+      const imgRef = storageRef(storage, 'posts/' + Date.now() + '_' + file.name);
+      try {
+        const snapshot = await uploadBytes(imgRef, file);
+        imageUrl = await getDownloadURL(snapshot.ref);
+      } catch (err) {
+        alert('Upload error: ' + err.message);
+        postForm.querySelector('button').disabled = false;
+        return;
+      }
+    }
+
+    await push(ref(db, 'posts'), {
+      message,
+      imageUrl,
+      timestamp: Date.now()
+    });
+
+    messageInput.value = '';
+    imageInput.value = '';
+    postForm.querySelector('button').disabled = false;
+  });
+
+  // Load posts
+  const postsRef = query(ref(db, 'posts'), orderByChild('timestamp'));
+  onValue(postsRef, snapshot => {
+    postsDiv.innerHTML = '';
+    const posts = snapshot.val();
+    if (!posts) {
+      postsDiv.innerHTML = '<p>No posts yet.</p>';
+      return;
+    }
+
+    const entries = Object.entries(posts).sort((a, b) => b[1].timestamp - a[1].timestamp);
+    entries.forEach(([id, post]) => {
+      const postEl = document.createElement('div');
+      postEl.className = 'post';
+      let html = `<p>${escapeHtml(post.message || '')}</p>`;
+      if (post.imageUrl) {
+        html += `<img src="${post.imageUrl}" alt="Post Image" />`;
+      }
+      html += `<small>${new Date(post.timestamp).toLocaleString()}</small>`;
+      postEl.innerHTML = html;
+      postsDiv.appendChild(postEl);
+    });
+  });
+
+  function escapeHtml(text) {
+    return text.replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[m]));
+  }
+</script>
+
+</body>
+</html>
